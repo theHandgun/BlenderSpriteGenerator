@@ -36,12 +36,12 @@ class CharacterSpriteRenderer(bpy.types.Operator):
 
         if camera_path == "":
             # Getting properties from the scene
-            character_position = Vector((0, 0, 0)) 
-            character_height = context.scene.sprite_renderer.character_height
+            character_position = Vector((context.scene.sprite_renderer.pos_offset_x, context.scene.sprite_renderer.pos_offset_y, context.scene.sprite_renderer.pos_offset_z)) 
+            character_scale = context.scene.sprite_renderer.character_scale
             number_of_angles = context.scene.sprite_renderer.number_of_angles
 
-            scene.render.resolution_x = int(context.scene.sprite_renderer.resolution)
-            scene.render.resolution_y = int(context.scene.sprite_renderer.resolution)
+            scene.render.resolution_x = context.scene.sprite_renderer.resolution_x
+            scene.render.resolution_y = context.scene.sprite_renderer.resolution_y
             scene.render.film_transparent = True
 
             perspective = context.scene.sprite_renderer.perspective
@@ -60,7 +60,7 @@ class CharacterSpriteRenderer(bpy.types.Operator):
 
             if camera_type == 'ORTHO':
                 camera.data.type = 'ORTHO'
-                camera.data.ortho_scale = character_height * 1.1
+                camera.data.ortho_scale = character_scale * 1.1
             else:
                 camera.data.type = 'PERSP'
 
@@ -68,7 +68,7 @@ class CharacterSpriteRenderer(bpy.types.Operator):
                 distance = 10
                 z_distance = 0
             else:
-                distance = 0.5 * character_height / tan(0.5 * atan(0.5 * camera.data.sensor_height / camera.data.lens))
+                distance = 0.5 * character_scale / tan(0.5 * atan(0.5 * camera.data.sensor_height / camera.data.lens))
                 camera_angle_rad = context.scene.sprite_renderer.camera_angle * 3.14159 / 180  # converting to radians
                 z_distance = distance * tan(camera_angle_rad)
 
@@ -79,10 +79,10 @@ class CharacterSpriteRenderer(bpy.types.Operator):
                 # Set the camera's position
                 camera.location.x = character_position.x + distance * cos(angle)
                 camera.location.y = character_position.y + distance * sin(angle)
-                camera.location.z = character_position.z + (character_height / 2) + z_distance
+                camera.location.z = character_position.z + (character_scale / 2) + z_distance
 
                 # Point the camera to the character
-                direction = Vector((character_position.x, character_position.y, character_position.z + (character_height / 2))) - camera.location
+                direction = Vector((character_position.x, character_position.y, character_position.z + (character_scale / 2))) - camera.location
                 camera.rotation_mode = 'QUATERNION'
                 camera.rotation_quaternion = direction.to_track_quat('-Z', 'Y')  # camera looks towards the character
 
@@ -153,7 +153,7 @@ class SpriteRendererPanel(bpy.types.Panel):
         # Adding a label for the subsection
         camera_box.label(text="Camera Settings")
 
-        camera_box.prop(renderer, "character_height")
+        camera_box.prop(renderer, "character_scale")
         camera_box.prop(renderer, "number_of_angles")
 
         camera_box.prop(renderer, "perspective")
@@ -163,8 +163,12 @@ class SpriteRendererPanel(bpy.types.Panel):
         row.prop(renderer, "camera_angle")
 
         camera_box.prop(renderer, "camera_type")
-        camera_box.prop(renderer, "resolution")
-
+        camera_box.prop(renderer, "resolution_x")
+        camera_box.prop(renderer, "resolution_y")
+        
+        camera_box.prop(renderer, "pos_offset_x")
+        camera_box.prop(renderer, "pos_offset_y")
+        camera_box.prop(renderer, "pos_offset_z")
         # draw the operator
         layout.operator("object.sprite_renderer")
 
@@ -188,7 +192,7 @@ class SpriteRendererProperties(bpy.types.PropertyGroup):
         description="Render every n-th frame of the animation. For example, if set to 3, only every third frame will be rendered.",
     )
 
-    character_height: bpy.props.FloatProperty(name="Character Height", default=2.0)
+    character_scale: bpy.props.FloatProperty(name="Character Scale", default=2.0)
     number_of_angles: bpy.props.IntProperty(name="Number of Angles", default=8)
     perspective: bpy.props.EnumProperty(
         name="Perspective",
@@ -209,18 +213,13 @@ class SpriteRendererProperties(bpy.types.PropertyGroup):
         ],
         default='ORTHO',
     )
-    resolution: bpy.props.EnumProperty(
-        name="Resolution",
-        description="Select the resolution",
-        items=[
-            ('32', "32x32", ""),
-            ('64', "64x64", ""),
-            ('128', "128x128", ""),
-            ('256', "256x256", ""),
-            ('512', "512x512", "")
-        ],
-        default='512',
-    )
+
+    resolution_x: bpy.props.IntProperty(name="Resolution X", default=256)
+    resolution_y: bpy.props.IntProperty(name="Resolution Y", default=512)
+
+    pos_offset_x: bpy.props.IntProperty(name="Position Offset X", default=0)
+    pos_offset_y: bpy.props.IntProperty(name="Position Offset Y", default=0)
+    pos_offset_z: bpy.props.IntProperty(name="Position Offset Z", default=0)
 
 
 # Registration
